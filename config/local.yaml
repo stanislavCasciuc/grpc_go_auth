@@ -1,6 +1,7 @@
 env: "local" # local, dev, prod
-storage_path: "/storage/sso.db"
+storage_path: "./storage/sso.db"
 token_ttl: 1h
+secret_path: "/internal/config/"
 grpc:
   port: 44044
   timeout: 10h

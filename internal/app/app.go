@@ -2,6 +2,8 @@ package app
 
 import (
 	grpcapp "auth_grpc/internal/app/grpc"
+	"auth_grpc/internal/services/auth"
+	"auth_grpc/internal/storage/sqlite"
 	"log/slog"
 	"time"
 )
@@ -16,8 +18,14 @@ func New(
 	storagePath string,
 	tokenTTL time.Duration,
 ) *App {
+	storage, err := sqlite.New(storagePath)
+	if err != nil {
+		panic(err)
+	}
 
-	grpcApp := grpcapp.New(log, grpcPort)
+	authService := auth.New(log, storage, storage, storage, tokenTTL)
+
+	grpcApp := grpcapp.New(log, authService, grpcPort)
 
 	return &App{
 		GRPCSrv: grpcApp,

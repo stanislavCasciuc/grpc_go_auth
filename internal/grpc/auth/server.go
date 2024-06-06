@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"auth_grpc/internal/services/auth"
+	"auth_grpc/internal/storage"
 	"context"
+	"errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,7 +19,8 @@ type Auth interface {
 		password string,
 		appID int,
 	) (token string, err error)
-	RegisterNewUser(ctx context.Context,
+	RegisterNewUser(
+		ctx context.Context,
 		email string,
 		password string,
 	) (userId int64, err error)
@@ -50,7 +54,9 @@ func (s *serverAPI) IsAdmin(ctx context.Context, req *ssoy1.IsAdminRequest) (*ss
 	}
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
-		// TODO ....
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssoy1.IsAdminResponse{
@@ -64,7 +70,9 @@ func (s *serverAPI) Login(ctx context.Context, req *ssoy1.LoginRequest) (*ssoy1.
 	}
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
-		// TODO ...
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssoy1.LoginResponse{
@@ -79,7 +87,9 @@ func (s *serverAPI) Register(ctx context.Context, req *ssoy1.RegisterRequest) (*
 
 	userID, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		// TODO ...
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user exists")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssoy1.RegisterResponse{
